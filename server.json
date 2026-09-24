@@ -3,7 +3,7 @@
   "name": "io.github.pipeworx-io/cloudflare-radar",
   "title": "Cloudflare Radar",
   "description": "Cloudflare Radar MCP — internet observatory (traffic, attacks, BGP, quality)",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "websiteUrl": "https://pipeworx.io/packs/cloudflare-radar",
   "repository": {
     "url": "https://github.com/pipeworx-io/mcp-cloudflare-radar",
