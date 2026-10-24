@@ -952,6 +952,7 @@ async function parseJsonBounded<T>(
  * - bgp_leaks:          recent BGP route-leak events
  * - radar_domain_rank:  a single domain's popularity rank + trajectory
  * - radar_top_domains:  the most-visited domains globally or by location
+ * - radar_ai_bots:      share of AI-crawler traffic by user agent / purpose / industry
  */
 
 
@@ -1059,6 +1060,22 @@ const tools: McpToolExport['tools'] = [
       required: [],
     },
   },
+  {
+    name: 'radar_ai_bots',
+    description:
+      'Cloudflare Radar AI bots: which AI crawlers (GPTBot, ClaudeBot, PerplexityBot, Bytespider, Amazonbot, ...) generate how much of AI-bot traffic. Returns percentage shares by user agent, by crawl purpose (training, search, user action) or by industry of the crawled sites, over a date range, globally or for one country. Pass user_agent to get a single crawler\'s share; an unknown user agent returns found:false.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        dimension: { type: 'string', description: 'user_agent | crawl_purpose | industry (default user_agent)' },
+        date_range: { type: 'string', description: 'Lookback window: 1d | 7d | 14d | 28d | 12w | 24w | 52w (default 28d)' },
+        location: { type: 'string', description: '2-letter country code (e.g., "US"). Omit for global.' },
+        user_agent: { type: 'string', description: 'Only with dimension=user_agent: look up one crawler by name, e.g. "GPTBot".' },
+        limit: { type: 'number', description: 'Max rows returned, 1-100 (default 25)' },
+      },
+      required: [],
+    },
+  },
 ];
 
 async function callTool(name: string, args: Record<string, unknown>): Promise<unknown> {
@@ -1081,6 +1098,8 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
       return radarDomainRank(apiKey, args);
     case 'radar_top_domains':
       return radarTopDomains(apiKey, args);
+    case 'radar_ai_bots':
+      return radarAiBots(apiKey, args);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -1352,6 +1371,55 @@ async function radarTopDomains(apiKey: string, args: Record<string, unknown>) {
       categories: (r.categories ?? []).map((c) => c.name).filter(Boolean),
     })),
   };
+}
+
+const AI_BOT_DIMENSIONS = ['user_agent', 'crawl_purpose', 'industry'];
+
+async function radarAiBots(apiKey: string, args: Record<string, unknown>) {
+  const dimension = String(args.dimension ?? 'user_agent').toLowerCase();
+  if (!AI_BOT_DIMENSIONS.includes(dimension)) {
+    throw new Error(`Cloudflare Radar: dimension must be one of ${AI_BOT_DIMENSIONS.join(' | ')}`);
+  }
+  const limit = Math.min(100, Math.max(1, Number(args.limit ?? 25) || 25));
+  type Resp = { result?: { summary_0?: Record<string, string>; meta?: { dateRange?: { startTime?: string; endTime?: string }[]; lastUpdated?: string } } };
+  const params = commonParams(args);
+  let data: Resp;
+  try {
+    data = await radarFetch<Resp>(apiKey, `/ai/bots/summary/${dimension.toUpperCase()}`, params);
+  } catch (e) {
+    // Radar has documented this route with both spellings of the dimension; retry once in the other case.
+    if (e instanceof Error && /error: (400|404)/.test(e.message)) {
+      data = await radarFetch<Resp>(apiKey, `/ai/bots/summary/${dimension}`, params);
+    } else throw e;
+  }
+  const summary = data.result?.summary_0 ?? {};
+  const all = Object.entries(summary)
+    .map(([name, v]) => ({ name, share_pct: Number(v) }))
+    .filter((r) => Number.isFinite(r.share_pct))
+    .sort((a, b) => b.share_pct - a.share_pct);
+  const range = data.result?.meta?.dateRange?.[0];
+  const base = {
+    source: 'Cloudflare Radar, AI bots',
+    dimension,
+    location: args.location ? String(args.location).toUpperCase() : 'GLOBAL',
+    date_range: String(args.date_range ?? '28d'),
+    range_start: range?.startTime ?? null,
+    range_end: range?.endTime ?? null,
+    data_as_of: data.result?.meta?.lastUpdated ?? range?.endTime ?? null,
+  };
+  if (all.length === 0) {
+    return { ...base, found: false, note: 'Radar returned no AI-bot traffic for this window and location.', rows: [] };
+  }
+  const ua = args.user_agent ? String(args.user_agent).trim() : '';
+  if (ua) {
+    if (dimension !== 'user_agent') throw new Error('Cloudflare Radar: user_agent lookup needs dimension=user_agent');
+    const hit = all.find((r) => r.name.toLowerCase() === ua.toLowerCase());
+    if (!hit) {
+      return { ...base, found: false, user_agent: ua, note: 'Not among the AI-bot user agents Radar reports for this window.', known_user_agents: all.slice(0, 10).map((r) => r.name) };
+    }
+    return { ...base, found: true, user_agent: hit.name, share_pct: hit.share_pct, rank: all.indexOf(hit) + 1, of: all.length };
+  }
+  return { ...base, found: true, total_rows: all.length, rows: all.slice(0, limit) };
 }
 
 export default { tools, callTool, meter: { credits: 2 } } satisfies McpToolExport;

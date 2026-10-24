@@ -2,7 +2,7 @@
 
 Cloudflare Radar MCP — internet observatory (traffic, attacks, BGP, quality).
 
-Part of [Pipeworx](https://pipeworx.io) — an MCP gateway connecting AI agents to 1875+ live data sources. This is an independent, unofficial integration — not affiliated with, endorsed by, or published by the upstream provider.
+Part of [Pipeworx](https://pipeworx.io) — an MCP gateway connecting AI agents to 1878+ live data sources. This is an independent, unofficial integration — not affiliated with, endorsed by, or published by the upstream provider.
 
 ## Tools
 
@@ -12,6 +12,7 @@ Part of [Pipeworx](https://pipeworx.io) — an MCP gateway connecting AI agents 
 - `bgp_leaks(date_range?, limit?)` — recent BGP route-leak events.
 - `radar_domain_rank(domain, date?)` — a single domain's popularity rank/bucket, category, and top locations. Answers "is this domain widely visited, or nowhere".
 - `radar_top_domains(limit?, location?, date?)` — the most-visited domains globally or by country.
+- `radar_ai_bots(dimension?, date_range?, location?, user_agent?, limit?)` — Cloudflare Radar AI bots: share of AI-crawler traffic (GPTBot, ClaudeBot, PerplexityBot, Bytespider, ...) by user agent, crawl purpose or industry. Unknown `user_agent` returns `found:false`.
 
 ## Auth
 
@@ -66,7 +67,7 @@ directly, instead of just this one's:
 }
 ```
 
-Both URLs reach the same gateway and the same 1875+ data sources. The
+Both URLs reach the same gateway and the same 1878+ data sources. The
 only difference is which pack's tools are listed **directly**; `ask_pipeworx`
 reaches all of them from either one.
 
