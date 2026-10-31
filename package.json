@@ -1,6 +1,6 @@
 {
   "name": "@pipeworx/mcp-cloudflare-radar",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Cloudflare Radar MCP — internet observatory (traffic, attacks, BGP, quality)",
   "type": "module",
   "main": "lib/index.js",
@@ -27,7 +27,7 @@
     "mode": "gateway",
     "slug": "cloudflare-radar",
     "gatewaySlug": "cloudflare-radar",
-    "sourceHash": "v1-f6d76af3daa5f2bc26c897b82052726d4204f74faaf71c3368976a2791d48cec",
-    "sourceCommit": "4277282d72f9bf55e548b3799aaf737baf22152f"
+    "sourceHash": "v1-2a9b579157a2b42a4eab5044b1c7a80ba34ee6d5abbf8631912b568eb93a43a7",
+    "sourceCommit": "8cc978183948532674e797c429305c9d8ab2a1c3"
   }
 }
